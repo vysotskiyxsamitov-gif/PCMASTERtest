@@ -268,36 +268,54 @@ function shelf(){while(shI.children.length)shI.remove(shI.children[0]);if(!G)ret
 function floorB(){while(flG.children.length)flG.remove(flG.children[0]);if(!G)return;G.st.filter(x=>x.fl&&!x.h).forEach(x=>{const w=new THREE.Group(),o=new THREE.Group(),g=PB[x.c](D(x));g.scale.setScalar(S);if(x.c!=5)g.rotation.x=-HP;g.position.y=x.c==0?1.1*S:x.c==5?.3*S:.25*S;o.add(g);o.rotation.y=x.r||0;w.add(o);const m=new THREE.Mesh(new THREE.SphereGeometry(.1),new THREE.MeshBasicMaterial({color:0xfacc15}));m.position.y=1.0;w.add(m);lp(w,nm(x),.9,.2,0,.78,0,'#fff','#111827').lookAt(new V(0,.78,20));w.position.set(x.x,0,x.z);w.userData.act=()=>take(x);flG.add(w)})}
 function take(x){if(hand||carry){toast('Руки заняты.');return}x.h=1;setHand(x);sfx('take')}
 function putSec(c){if(!hand)return;if(hand.c!=c){sfx('error');toast(`Это ${CN[hand.c].toLowerCase()}. Ему нужна полка «${SECN[hand.c]}».`);return}hand.fl=0;hand.h=0;setHand(null);sfx('put');tidyCheck()}
+var MAXCALL=null;
 function maxPhoneCall(done){
-  if(document.getElementById('max-phone-call')) return;
-  mode='talk';
-  const overlay=document.createElement('div');
-  overlay.id='max-phone-call';
-  overlay.innerHTML=
-    '<div class="mpc-backdrop"></div>'+
-    '<div class="mpc-scene">'+
-      '<div class="mpc-caption">ВХОДЯЩИЙ ЗВОНОК</div>'+
-      '<div class="mpc-phone-wrap"><div class="mpc-phone">'+
-        '<div class="mpc-speaker"></div><div class="mpc-screen">'+
-          '<div class="mpc-avatar">М</div><div class="mpc-name">Макс</div>'+
-          '<div class="mpc-status">мобильный · звонит</div>'+
-          '<div class="mpc-wave"><i></i><i></i><i></i><i></i><i></i></div>'+
-          '<div class="mpc-actions"><button class="mpc-decline" type="button">✕</button>'+
-          '<button class="mpc-accept" type="button">☎</button></div>'+
-          '<div class="mpc-action-labels"><span>Сбросить</span><span>Ответить</span></div>'+
-        '</div></div></div>'+
-      '<div class="mpc-tip">Телефон вибрирует на столе</div>'+
-    '</div>';
-  document.body.appendChild(overlay);
-  const finish=(answer)=>{
-    if(!overlay.isConnected)return;
-    overlay.classList.add('mpc-away');
-    setTimeout(()=>{overlay.remove(); if(answer) done(); else {mode='play';UI();tryLock();}},420);
-  };
-  overlay.querySelector('.mpc-accept').addEventListener('click',()=>finish(true));
-  overlay.querySelector('.mpc-decline').addEventListener('click',()=>finish(false));
-  overlay.addEventListener('keydown',e=>{if(e.key==='Enter')finish(true);});
+  if(MAXCALL) return;
+  phoneEnsure();
+  MAXCALL={t:0,phase:'ring',done:done,answer:false};
+  PHN.visible=true;
+  drawPhone('ring',0,'Макс');
+  phonePose(PH_RD,1,0);
+  try{if(document.pointerLockElement)document.exitPointerLock()}catch(e){}
+  const panel=document.createElement('div');
+  panel.id='max-phone-call';
+  panel.style.cssText='position:fixed;inset:0;z-index:1000;display:flex;align-items:flex-end;justify-content:center;padding:28px 16px;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.62));pointer-events:none;font-family:system-ui,sans-serif;color:#fff';
+  panel.innerHTML='<div style="pointer-events:auto;text-align:center;background:rgba(8,13,25,.88);border:1px solid #64748b88;border-radius:18px;padding:16px 22px;backdrop-filter:blur(12px);box-shadow:0 12px 40px #0009"><div style="font-size:12px;letter-spacing:.2em;color:#93c5fd;margin-bottom:6px">ВХОДЯЩИЙ ЗВОНОК</div><div style="font-size:22px;font-weight:800;margin-bottom:12px">Макс</div><button class="b" id="max-decline" style="background:#dc2626;margin-right:14px">✕ Сбросить [Q]</button><button class="b pr" id="max-accept" style="background:#16a34a;color:white">☎ Ответить [E]</button></div>';
+  document.body.appendChild(panel);
+  MAXCALL.panel=panel;
+  panel.querySelector('#max-accept').addEventListener('click',function(){maxCallAnswer(true)});
+  panel.querySelector('#max-decline').addEventListener('click',function(){maxCallAnswer(false)});
 }
+function maxCallAnswer(answer){
+  if(!MAXCALL||MAXCALL.phase!=='ring')return;
+  MAXCALL.answer=answer;MAXCALL.phase='move';MAXCALL.t=0;
+  if(answer){sfx('tap');drawPhone('talk',0,'Макс');}
+  else{sfx('hangup');drawPhone('off',0,'Макс');}
+  var panel=MAXCALL.panel;if(panel){panel.style.transition='opacity .25s';panel.style.opacity='0';}
+}
+function maxCallTick(dt){
+  if(!MAXCALL)return;
+  var c=MAXCALL;c.t+=dt;
+  if(c.phase==='ring'){
+    if(Math.floor(c.t*3)!==Math.floor((c.t-dt)*3))sfx('buzz');
+    phonePose(PH_RD,1,c.t);
+  }else if(c.phase==='move'){
+    var target=c.answer?PH_EAR:PH_HID;
+    phonePose(lerpP(PH_RD,target,ease(clamp01(c.t/.85))),0,c.t);
+    if(c.t>=.9){
+      PHN.visible=false;
+      if(c.panel)c.panel.remove();
+      MAXCALL=null;
+      if(c.answer){c.done&&c.done();}
+      else{try{if(mode==='play')tryLock()}catch(e){}}
+    }
+  }
+}
+addEventListener('keydown',function(e){
+  if(!MAXCALL||MAXCALL.phase!=='ring'||e.repeat)return;
+  if(e.code==='KeyE'||e.code==='Enter'){e.preventDefault();maxCallAnswer(true)}
+  else if(e.code==='KeyQ'||e.code==='Escape'){e.preventDefault();maxCallAnswer(false)}
+});
 function tidyCheck(){if(G.tid)return;if(!G.st.some(x=>x.fl)){G.tid=1;tScr.material.color.setHex(0xffffff);save();hint();hud();shelf();maxPhoneCall(()=>talk([['Макс (по телефону)','Живой? Это Макс. Слышал, что с тобой сделали… Держись.'],['Макс','Склад ты, смотрю, уже разобрал. Из этих деталей выходит два-три компьютера.'],['Макс','Собери один и продай первому клиенту. Помни: сокет процессора должен совпадать с материнкой, а память — того же поколения.'],['Макс','Маркет деталей — на компьютере справа. Удачи, шеф.']],()=>{spT=9}))}else hint()}
 let gh=null;const TW=[],PW=[];
 function tw(d,f,cb){TW.push({t:0,d,f,cb})}
@@ -378,7 +396,7 @@ addEventListener('mousemove',e=>{if(mode=='play'&&document.pointerLockElement===
 addEventListener('click',()=>{if(mode=='play'&&!noPL&&!document.pointerLockElement&&!matchMedia('(pointer:coarse)').matches)tryLock()});
 document.addEventListener('pointerlockchange',()=>{if(document.pointerLockElement)plErr=0});
 document.addEventListener('pointerlockerror',()=>{plErr++;noPL=0;});
-function ui2(){humLevel(opt.s&&mode!='menu'&&!PZ?.035:0);const pl=mode=='play',lk=document.pointerLockElement===ctl,tc2=matchMedia('(pointer:coarse)').matches;if(!pl&&document.pointerLockElement)document.exitPointerLock();const s=[pl,lk,noPL,tc2].join();if(s!=lkS){lkS=s;$('cr').style.display=pl&&!tc2?'block':'none';$('lk').style.display=pl&&!lk&&!noPL&&!tc2?'block':'none';ctl.style.cursor=pl&&!tc2?(noPL?'crosshair':'none'):''}
+function ui2(){humLevel(opt.s&&mode!='menu'&&!PZ?.035:0);const pl=mode=='play',lk=document.pointerLockElement===ctl,tc2=matchMedia('(pointer:coarse)').matches;if(!pl&&document.pointerLockElement)document.exitPointerLock();const s=[pl,lk,noPL,tc2].join();if(s!=lkS){lkS=s;$('cr').style.display=pl&&!tc2?'block':'none';$('lk').style.display=pl&&!lk&&!noPL&&!tc2?'block':'none';ctl.style.cursor=pl&&!tc2?'none':''}
  if(pl&&!tc2){if(++epT%6==0)$('ep').style.display=aim(7)?'block':'none'}else $('ep').style.display='none'}
 function blocked(x,z){return(Math.abs(x)<3.6&&z<-3.4)||(Math.abs(x)<2.8&&z>1&&z<3)||x<-8.4||x>7||z<-7||z>7}
 /* ===== сюжет: избиение и пробуждение ===== */
@@ -413,12 +431,13 @@ function frame(){requestAnimationFrame(frame);ui2();const dt=PZ?(clock.getDelta(
  const ndr=nearDoor();if(ndr&&!doorW&&mode!='menu')sfx('door');doorW=ndr;doorA+=((ndr?1:0)-doorA)*Math.min(1,dt*3.5);doorL.position.x=-.75-doorA*1.45;doorR.position.x=.75+doorA*1.45;
  const dpa=dustG.attributes.position;for(let i=0;i<dpa.count;i++){let y=dpa.getY(i)+dt*.08*(1+Math.sin(i));if(y>9)y=.3;dpa.setY(i,y);dpa.setX(i,dpa.getX(i)+Math.sin(tt*.3+i)*dt*.05)}dpa.needsUpdate=true;
  if(mode=='wake')wakeTick(dt);else if(mode=='beat')beatTick(dt);else if(mode=='call')callTick(dt);
- else if(mode=='play'||mode=='term'||mode=='talk'||mode=='mg'){let mv=0;if(mode=='play'){let f=-jy+(keys.w?1:0)-(keys.s?1:0),s2=jx+(keys.d?1:0)-(keys.a?1:0);const ln=Math.hypot(f,s2);if(ln>1){f/=ln;s2/=ln}const sp5=5*(carry?.45:1),k=Math.min(1,dt*(ln?8:11));VX+=((-Math.sin(yaw)*f+Math.cos(yaw)*s2)*sp5-VX)*k;VZ+=((-Math.cos(yaw)*f-Math.sin(yaw)*s2)*sp5-VZ)*k;const nx=P.x+VX*dt,nz=P.z+VZ*dt;if(!blocked(nx,P.z))P.x=nx;else VX*=-.1;if(!blocked(P.x,nz))P.z=nz;else VZ*=-.1;mv=Math.min(1,Math.hypot(VX,VZ)/3.2)}else{VX=VZ=0}
+ else if(mode=='play'||mode=='term'||mode=='talk'||mode=='mg'){let mv=0;if(mode=='play'&&!MAXCALL){let f=-jy+(keys.w?1:0)-(keys.s?1:0),s2=jx+(keys.d?1:0)-(keys.a?1:0);const ln=Math.hypot(f,s2);if(ln>1){f/=ln;s2/=ln}const sp5=5*(carry?.45:1),k=Math.min(1,dt*(ln?8:11));VX+=((-Math.sin(yaw)*f+Math.cos(yaw)*s2)*sp5-VX)*k;VZ+=((-Math.cos(yaw)*f-Math.sin(yaw)*s2)*sp5-VZ)*k;const nx=P.x+VX*dt,nz=P.z+VZ*dt;if(!blocked(nx,P.z))P.x=nx;else VX*=-.1;if(!blocked(P.x,nz))P.z=nz;else VZ*=-.1;mv=Math.min(1,Math.hypot(VX,VZ)/3.2)}else{VX=VZ=0}
   cyaw+=(yaw-cyaw)*Math.min(1,dt*16);cpit+=(pit-cpit)*Math.min(1,dt*16);mvf+=(mv-mvf)*Math.min(1,dt*8);walk+=mvf*dt*7*(carry?.6:1);{const sn=Math.floor(walk/Math.PI);if(sn!=stepN){stepN=sn;if(mode=='play'&&mvf>.3)sfx('step')}}
   cam.position.set(P.x+Math.sin(walk)*.02*mvf,P.y+Math.sin(walk*2)*.045*mvf+Math.sin(tt*1.1)*.006,P.z);cam.rotation.set(opt.sm?cpit:pit,opt.sm?cyaw:yaw,Math.sin(walk)*.01*mvf-(VX*Math.cos(yaw)-VZ*Math.sin(yaw))*.006);
   const zm=mode=='play'&&A.cs&&P.z<-1&&Math.abs(P.x)<4.2?.62:1;fovT+=((cam.aspect<1?88:70)*zm-fovT)*Math.min(1,dt*4);if(Math.abs(cam.fov-fovT)>.05){cam.fov=fovT;cam.updateProjectionMatrix()}
   if(carryG){carryG.position.set(.62+(yaw-cyaw)*1.5,-.85+Math.sin(tt*1.1)*.01+Math.sin(walk*2)*.03*mvf,-1.65)}if(hm){hm.position.set(.8-(hand&&hand.c==5?.35:0)+(yaw-cyaw)*2+Math.sin(tt*1.6)*.01,-.7+Math.sin(tt*1.2)*.012+Math.sin(walk*2)*.02*mvf,-1.5);hm.rotation.set(.3,-.5+(yaw-cyaw),Math.sin(walk)*.03*mvf)}}
  else{orb+=dt*.2;cam.position.set(Math.sin(orb)*11,5.5,-5+Math.cos(orb)*11);cam.lookAt(0,3.6,-5)}
+ if(MAXCALL)maxCallTick(dt);
  R.render(scene,cam)}
 /* ===== игровая логика ===== */
 const WCAT=[0,1,1,2,2,2,3,4,4,5,5,5,5,5,6];

@@ -1,4 +1,3 @@
-[extras.js](https://github.com/user-attachments/files/34234102/extras.js)
 /* extras.js — звуки, меню по Esc, песочница.
    Подключается в index.html ОДНОЙ строкой перед </body>:
    <script src="extras.js"></script>
@@ -102,7 +101,17 @@ function pause(){
  lab();view(false);ov.classList.add('on')}
 function resume(){
  if(!paused)return;
- paused=false;mode=prevMode;ov.classList.remove('on');plErr=0;UI()}
+ paused=false;
+ mode=prevMode;
+ ov.classList.remove('on');
+ plErr=0;
+ UI();
+ // Возвращаем Pointer Lock прямо в обработчике Esc/клика «Продолжить».
+ // Это важно: браузер разрешает захват мыши только из действия пользователя.
+ if(mode==='play'&&!coarse()){
+  try { tryLock(); } catch(e) { console.warn('Pointer Lock resume:',e); }
+ }
+}
 ov.addEventListener('click',e=>{
  const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
  if(a==='resume')resume();else if(a==='set'){lab();view(true)}else if(a==='back')view(false);

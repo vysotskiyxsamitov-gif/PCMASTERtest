@@ -51,7 +51,7 @@ function callSub(w, txt) {
 }
 
 /* ---------- телефон ---------- */
-function drawPhone(st, tt) {
+function drawPhone(st, tt, caller) {
   var c = PHC, x = c.getContext('2d'), W = c.width, H = c.height;
   x.fillStyle = '#05070c'; x.fillRect(0, 0, W, H);
   if (st != 'off') {
@@ -64,10 +64,10 @@ function drawPhone(st, tt) {
     x.strokeStyle = 'rgba(110,231,255,' + (.15 + .35 * pl) + ')'; x.lineWidth = 3;
     x.beginPath(); x.arc(W / 2, 120, 44 + pl * 8, 0, 7); x.stroke();
     x.fillStyle = '#334155'; x.beginPath(); x.arc(W / 2, 120, 40, 0, 7); x.fill();
-    x.fillStyle = '#e5e7eb'; x.font = 'bold 40px sans-serif'; x.textBaseline = 'middle'; x.fillText('В', W / 2, 122); x.textBaseline = 'alphabetic';
-    x.font = 'bold 26px sans-serif'; x.fillStyle = '#fff'; x.fillText('Виктор', W / 2, 200);
+    x.fillStyle = '#e5e7eb'; x.font = 'bold 40px sans-serif'; x.textBaseline = 'middle'; x.fillText(caller == 'Макс' ? 'М' : 'В', W / 2, 122); x.textBaseline = 'alphabetic';
+    x.font = 'bold 26px sans-serif'; x.fillStyle = '#fff'; x.fillText(caller || 'Виктор', W / 2, 200);
     x.font = '14px sans-serif'; x.fillStyle = '#9aa4b8';
-    x.fillText(st == 'ring' ? 'кредитор · входящий вызов' : 'идёт разговор', W / 2, 224);
+    x.fillText(st == 'ring' ? (caller == 'Макс' ? 'друг · входящий вызов' : 'кредитор · входящий вызов') : 'идёт разговор', W / 2, 224);
     var btn = function (cx, cy, col, kind, lb) {
       x.fillStyle = col; x.beginPath(); x.arc(cx, cy, 26, 0, 7); x.fill();
       x.strokeStyle = '#fff'; x.fillStyle = '#fff'; x.lineWidth = 4; x.lineCap = 'round';
