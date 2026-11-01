@@ -370,14 +370,14 @@ ctl.addEventListener('pointerup',up);ctl.addEventListener('pointercancel',up);
 let noPL=0,plErr=0,epT=0,lkS='';const KM={KeyW:'w',KeyA:'a',KeyS:'s',KeyD:'d',ArrowUp:'w',ArrowDown:'s',ArrowLeft:'a',ArrowRight:'d'};
 function aim(r){const out=[];scene.children.forEach(c=>gather(c,out));rc.setFromCamera(new THREE.Vector2(0,0),cam);for(const h of rc.intersectObjects(out,true)){if(h.distance>r)break;let o=h.object;while(o&&!o.userData.act)o=o.parent;if(!o||(o.userData.sec&&!hand))continue;return o}return null}
 function interact(){if(mode!='play')return;const o=aim(7);if(o)o.userData.act()}
-function tryLock(){if(PZ||noPL||document.pointerLockElement===ctl||matchMedia('(pointer:coarse)').matches)return;try{const r=ctl.requestPointerLock({unadjustedMovement:true});if(r&&r.catch)r.catch(()=>{try{const r2=ctl.requestPointerLock();if(r2&&r2.catch)r2.catch(()=>{})}catch(_){}})}catch(_){try{ctl.requestPointerLock()}catch(__){plErr++}}}
+function tryLock(){if(PZ||noPL||document.pointerLockElement===ctl||matchMedia('(pointer:coarse)').matches)return;try{const r=ctl.requestPointerLock();if(r&&typeof r.catch==='function')r.catch(()=>{plErr++;});}catch(_){plErr++;}}
 addEventListener('keydown',e=>{const c=e.code;if(KM[c])keys[KM[c]]=1;if(e.repeat)return;if(c=='KeyE'&&mode=='play'&&!PZ){e.preventDefault();interact()}else if((c=='KeyE'||c=='Enter'||c=='Space')&&mode=='talk'&&TK&&!(TK.i==TK.l.length-1&&TK.o)){e.preventDefault();tnext()}else if(c=='Escape'&&mode=='term')leave()});
 addEventListener('keyup',e=>{if(KM[e.code])keys[KM[e.code]]=0});
 addEventListener('blur',()=>{keys={}});
 addEventListener('mousemove',e=>{if(mode=='play'&&document.pointerLockElement===ctl){const mx=e.movementX,my=e.movementY;if(Math.abs(mx)>400||Math.abs(my)>400)return;const k=.0022*(opt.ms||1);yaw-=mx*k;pit=Math.max(-1.5,Math.min(1.5,pit-my*k*(opt.inv?-1:1)))}});
 addEventListener('click',()=>{if(mode=='play'&&!noPL&&!document.pointerLockElement&&!matchMedia('(pointer:coarse)').matches)tryLock()});
 document.addEventListener('pointerlockchange',()=>{if(document.pointerLockElement)plErr=0});
-document.addEventListener('pointerlockerror',()=>{if(++plErr>=3)noPL=1});
+document.addEventListener('pointerlockerror',()=>{plErr++;noPL=0;});
 function ui2(){humLevel(opt.s&&mode!='menu'&&!PZ?.035:0);const pl=mode=='play',lk=document.pointerLockElement===ctl,tc2=matchMedia('(pointer:coarse)').matches;if(!pl&&document.pointerLockElement)document.exitPointerLock();const s=[pl,lk,noPL,tc2].join();if(s!=lkS){lkS=s;$('cr').style.display=pl&&!tc2?'block':'none';$('lk').style.display=pl&&!lk&&!noPL&&!tc2?'block':'none';ctl.style.cursor=pl&&!tc2?(noPL?'crosshair':'none'):''}
  if(pl&&!tc2){if(++epT%6==0)$('ep').style.display=aim(7)?'block':'none'}else $('ep').style.display='none'}
 function blocked(x,z){return(Math.abs(x)<3.6&&z<-3.4)||(Math.abs(x)<2.8&&z>1&&z<3)||x<-8.4||x>7||z<-7||z>7}

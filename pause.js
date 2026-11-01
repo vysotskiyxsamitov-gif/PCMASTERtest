@@ -93,6 +93,7 @@ function pauseOpen() {
 
   PZ = 1;
   keys = {};
+  pzWas = !!document.pointerLockElement;
 
   try {
     if (document.pointerLockElement) {
@@ -117,21 +118,19 @@ function pauseHide() {
 function pauseClose() {
   if (!PZ) return;
 
+  // Важно: запрос Pointer Lock выполняется прямо внутри действия
+  // пользователя (кнопка «Продолжить» или клавиша Esc), без таймеров.
   pauseHide();
-
-  try {
-    optSave();
-  } catch (e) {}
-
   keys = {};
 
-  // Возвращаем захват мыши сразу после действия пользователя.
-  try {
-    if (mode == 'play' && typeof tryLock === 'function') {
+  try { optSave(); } catch (e) {}
+
+  if (mode === 'play' && typeof tryLock === 'function') {
+    try {
       tryLock();
+    } catch (e) {
+      console.warn('Не удалось вернуть захват мыши:', e);
     }
-  } catch (e) {
-    console.warn('Pointer Lock error:', e);
   }
 }
 
