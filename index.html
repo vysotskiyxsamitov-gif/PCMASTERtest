@@ -270,45 +270,53 @@ function take(x){if(hand||carry){toast('Руки заняты.');return}x.h=1;se
 function putSec(c){if(!hand)return;if(hand.c!=c){sfx('error');toast(`Это ${CN[hand.c].toLowerCase()}. Ему нужна полка «${SECN[hand.c]}».`);return}hand.fl=0;hand.h=0;setHand(null);sfx('put');tidyCheck()}
 var MAXCALL=null;
 function maxPhoneCall(done){
-  if(MAXCALL) return;
+  if(MAXCALL)return;
   phoneEnsure();
-  MAXCALL={t:0,phase:'ring',done:done,answer:false};
+  MAXCALL={t:0,phase:'draw',done:done,answer:false,panel:null};
   PHN.visible=true;
   drawPhone('ring',0,'Макс');
-  phonePose(PH_RD,1,0);
+  phonePose(PH_HID,0,0);
   try{if(document.pointerLockElement)document.exitPointerLock()}catch(e){}
   const panel=document.createElement('div');
   panel.id='max-phone-call';
   panel.style.cssText='position:fixed;inset:0;z-index:1000;display:flex;align-items:flex-end;justify-content:center;padding:28px 16px;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.62));pointer-events:none;font-family:system-ui,sans-serif;color:#fff';
   panel.innerHTML='<div style="pointer-events:auto;text-align:center;background:rgba(8,13,25,.88);border:1px solid #64748b88;border-radius:18px;padding:16px 22px;backdrop-filter:blur(12px);box-shadow:0 12px 40px #0009"><div style="font-size:12px;letter-spacing:.2em;color:#93c5fd;margin-bottom:6px">ВХОДЯЩИЙ ЗВОНОК</div><div style="font-size:22px;font-weight:800;margin-bottom:12px">Макс</div><button class="b" id="max-decline" style="background:#dc2626;margin-right:14px">✕ Сбросить [Q]</button><button class="b pr" id="max-accept" style="background:#16a34a;color:white">☎ Ответить [E]</button></div>';
-  document.body.appendChild(panel);
-  MAXCALL.panel=panel;
+  document.body.appendChild(panel);MAXCALL.panel=panel;
   panel.querySelector('#max-accept').addEventListener('click',function(){maxCallAnswer(true)});
   panel.querySelector('#max-decline').addEventListener('click',function(){maxCallAnswer(false)});
 }
 function maxCallAnswer(answer){
   if(!MAXCALL||MAXCALL.phase!=='ring')return;
   MAXCALL.answer=answer;MAXCALL.phase='move';MAXCALL.t=0;
-  if(answer){sfx('tap');drawPhone('talk',0,'Макс');}
-  else{sfx('hangup');drawPhone('off',0,'Макс');}
-  var panel=MAXCALL.panel;if(panel){panel.style.transition='opacity .25s';panel.style.opacity='0';}
+  if(answer){sfx('tap');drawPhone('talk',0,'Макс')}
+  else{sfx('hangup');drawPhone('off',0,'Макс')}
+  var panel=MAXCALL.panel;if(panel){panel.style.transition='opacity .25s';panel.style.opacity='0'}
 }
 function maxCallTick(dt){
   if(!MAXCALL)return;
   var c=MAXCALL;c.t+=dt;
-  if(c.phase==='ring'){
+  if(c.phase==='draw'){
+    if(!c.buzz1&&c.t>=.08){c.buzz1=1;sfx('buzz')}
+    if(!c.buzz2&&c.t>=.58){c.buzz2=1;sfx('buzz')}
+    phonePose(lerpP(PH_HID,PH_RD,ease(clamp01(c.t/1.25))),0,c.t);
+    if(c.t>=1.25){c.phase='ring';c.t=0;drawPhone('ring',0,'Макс')}
+  }else if(c.phase==='ring'){
     if(Math.floor(c.t*3)!==Math.floor((c.t-dt)*3))sfx('buzz');
-    phonePose(PH_RD,1,c.t);
+    drawPhone('ring',c.t,'Макс');phonePose(PH_RD,1,c.t);
   }else if(c.phase==='move'){
     var target=c.answer?PH_EAR:PH_HID;
-    phonePose(lerpP(PH_RD,target,ease(clamp01(c.t/.85))),0,c.t);
-    if(c.t>=.9){
-      PHN.visible=false;
-      if(c.panel)c.panel.remove();
-      MAXCALL=null;
-      if(c.answer){c.done&&c.done();}
-      else{try{if(mode==='play')tryLock()}catch(e){}}
+    phonePose(lerpP(PH_RD,target,ease(clamp01(c.t/.9))),0,c.t);
+    if(c.t>=.95){
+      if(c.panel)c.panel.remove();c.panel=null;
+      if(c.answer){c.phase='talk';c.t=0;drawPhone('talk',0,'Макс');if(c.done)c.done()}
+      else{PHN.visible=false;MAXCALL=null;try{if(mode==='play')tryLock()}catch(e){}}
     }
+  }else if(c.phase==='talk'){
+    phonePose(PH_EAR,0,c.t);
+    if(mode!=='talk'){c.phase='putaway';c.t=0;drawPhone('off',0,'Макс')}
+  }else if(c.phase==='putaway'){
+    phonePose(lerpP(PH_EAR,PH_HID,ease(clamp01(c.t/.85))),0,c.t);
+    if(c.t>=.9){PHN.visible=false;MAXCALL=null;try{if(mode==='play')tryLock()}catch(e){}}
   }
 }
 addEventListener('keydown',function(e){
