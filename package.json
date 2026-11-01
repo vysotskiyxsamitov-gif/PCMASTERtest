@@ -1,0 +1,41 @@
+
+{
+  "name": "pc-master",
+  "version": "1.0.0",
+  "description": "PC МАСТЕР — симулятор сборки ПК",
+  "main": "main.js",
+  "author": "PC Master",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "three": "0.128.0"
+  },
+  "build": {
+    "appId": "com.pcmaster.game",
+    "productName": "PC MASTER",
+    "files": [
+      "main.js",
+      "index.html",
+      "audio.js",
+      "pause.js",
+      "intro.js",
+      "extras.js",
+      "fx.js",
+      "three.min.js"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "artifactName": "PC-MASTER-Setup-${version}.${ext}"
+    }
+  }
+}
