@@ -91,7 +91,7 @@ ov.innerHTML='<div class="pz-card"><div class="pz-t">ПАУЗА</div>'+
  '<div class="pz-h">Esc — продолжить</div></div>';
 $$('w').appendChild(ov);
 const pzMain=ov.querySelector('.pz-main'),pzSet=ov.querySelector('.pz-set'),pzV=ov.querySelector('#pz_v');
-function lab(){ov.querySelector('[data-a=snd]').textContent='Звуки: '+(opt.s?'вкл':'выкл');ov.querySelector('[data-a=gfx]').textContent='Графика: '+(opt.q?'высокая':'экономная');pzV.value=Math.round(vol*100)}
+function lab(){ov.querySelector('[data-a=snd]').textContent='Звуки: '+(opt.s?'вкл':'выкл');ov.querySelector('[data-a=gfx]').textContent='Графика: '+(typeof gfxName==='function'?gfxName():(opt.q?'высокая':'экономная'));pzV.value=Math.round(vol*100)}
 function view(sets){pzMain.style.display=sets?'none':'flex';pzSet.style.display=sets?'flex':'none';const f=ov.querySelector(sets?'[data-a=back]':'[data-a=resume]');if(f)f.focus()}
 function pause(){
  if(paused||mode!=='play')return;
@@ -116,7 +116,7 @@ ov.addEventListener('click',e=>{
  const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
  if(a==='resume')resume();else if(a==='set'){lab();view(true)}else if(a==='back')view(false);
  else if(a==='snd'){opt.s=!opt.s;lab()}
- else if(a==='gfx'){opt.q=!opt.q;rs();lab()}
+ else if(a==='gfx'){if(typeof cycleGraphics==='function')cycleGraphics();else{opt.q=!opt.q;rs()}lab()}
  else if(a==='flip'){flip=-flip;rs()}
  else if(a==='exit'){try{save()}catch(_){}history.replaceState(null,'',location.pathname+location.search);location.reload()}});
 pzV.addEventListener('input',()=>{vol=pzV.value/100;try{localStorage.setItem('pcvol',vol)}catch(_){}if(MASTER)MASTER.gain.value=1.5*vol});
